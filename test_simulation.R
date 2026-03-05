@@ -189,6 +189,50 @@ p <- ggplot() +
        fill = NULL) +
   theme_minimal()
 
-ggsave("results/test_loghr_distribution.png", p, width = 8, height = 5, dpi = 150)
-cat("\nPlot saved to results/test_loghr_distribution.png\n")
+ggsave("results/test_loghr_distribution.png", p, width = 8, height = 5, dpi = 300)
+
+# --- Plot 2: SE comparison (box plot) ---
+se_df <- data.frame(
+  SE    = c(reps$se_unadj, reps$se_adj),
+  Model = rep(c("Unadjusted", "PROCOVA-adjusted"), each = nrow(reps))
+)
+se_df$Model <- factor(se_df$Model, levels = c("Unadjusted", "PROCOVA-adjusted"))
+
+p2 <- ggplot(se_df, aes(x = Model, y = SE, fill = Model)) +
+  geom_boxplot(alpha = 0.6, outlier.size = 0.8) +
+  scale_fill_manual(values = c("Unadjusted" = "#1C1917", "PROCOVA-adjusted" = "#DC2626")) +
+  labs(y = "Standard error of log(HR)",
+       title = "Precision of treatment effect estimates",
+       subtitle = sprintf("HR=%.2f, n=%d/arm, B=%d | Variance reduction: %.1f%%",
+                          HR_TEST, N_ARM_TEST, B_REPS,
+                          (1 - var_adj / var_unadj) * 100)) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+ggsave("results/test_se_comparison.png", p2, width = 6, height = 5, dpi = 300)
+
+# --- Plot 3: Squared error from truth ---
+reps$sq_err_unadj <- (reps$loghr_unadj - log(HR_TEST))^2
+reps$sq_err_adj   <- (reps$loghr_adj - log(HR_TEST))^2
+
+sq_df <- data.frame(
+  sq_err = c(reps$sq_err_unadj, reps$sq_err_adj),
+  Model  = rep(c("Unadjusted", "PROCOVA-adjusted"), each = nrow(reps))
+)
+sq_df$Model <- factor(sq_df$Model, levels = c("Unadjusted", "PROCOVA-adjusted"))
+
+p3 <- ggplot(sq_df, aes(x = Model, y = sq_err, fill = Model)) +
+  geom_boxplot(alpha = 0.6, outlier.size = 0.8) +
+  scale_fill_manual(values = c("Unadjusted" = "#1C1917", "PROCOVA-adjusted" = "#DC2626")) +
+  labs(y = expression((hat(beta) - beta[true])^2),
+       title = "Squared error of treatment effect estimates",
+       subtitle = sprintf("HR=%.2f, n=%d/arm, B=%d | Mean MSE ratio: %.3f",
+                          HR_TEST, N_ARM_TEST, B_REPS,
+                          mean(reps$sq_err_adj) / mean(reps$sq_err_unadj))) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+ggsave("results/test_squared_error.png", p3, width = 6, height = 5, dpi = 300)
+
+cat("\nPlots saved to results/\n")
 cat("Done.\n")
